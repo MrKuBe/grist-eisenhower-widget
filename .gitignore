@@ -1,0 +1,7 @@
+# Fichiers système macOS et Windows
+.DS_Store
+Thumbs.db
+
+# Dossiers de configuration des éditeurs de code
+.vscode/
+.idea/
