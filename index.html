@@ -3,224 +3,115 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matrice d'Eisenhower</title>
-    <!-- Importation du SDK Grist -->
+    <title>Matrice d'Eisenhower Pro</title>
     <script src="https://docs.getgrist.com/grist-widget.js"></script>
     <style>
-        /* --- Styles Généraux & Reset --- */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
             margin: 0;
-            padding: 1rem;
-            background-color: #f8f9fa;
-            color: #212529;
+            padding: 10px;
+            background-color: #f0f2f5;
             height: 100vh;
             box-sizing: border-box;
         }
 
-        /* --- Conteneur principal de la matrice --- */
         #matrix-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 1fr 1fr;
-            gap: 1rem;
-            height: calc(100% - 2rem); /* Hauteur totale moins le padding du body */
+            gap: 15px;
+            height: 100%;
         }
 
-        /* --- Style de base pour chaque quadrant --- */
         .quadrant {
             display: flex;
             flex-direction: column;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            overflow: hidden; /* Empêche le contenu de déborder */
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border-top: 5px solid #ccc;
         }
 
+        /* Couleurs des Quadrants */
+        #quadrant-do { border-top-color: #dc3545; }
+        #quadrant-schedule { border-top-color: #0d6efd; }
+        #quadrant-delegate { border-top-color: #ffc107; }
+        #quadrant-delete { border-top-color: #6c757d; }
+
         .quadrant-title {
-            padding: 0.75rem 1rem;
-            font-weight: 600;
-            border-bottom: 1px solid #e9ecef;
-            color: #fff;
+            padding: 12px;
+            margin: 0;
             font-size: 1.1em;
+            font-weight: bold;
+            text-align: center;
+            background: #fdfdfd;
+            border-bottom: 1px solid #eee;
         }
 
         .quadrant-tasks {
-            padding: 1rem;
-            overflow-y: auto; /* Ajoute une barre de défilement si nécessaire */
-            flex-grow: 1; /* Permet à cette zone de prendre tout l'espace restant */
+            padding: 10px;
+            flex-grow: 1;
+            overflow-y: auto;
+            min-height: 50px;
+            transition: background 0.2s;
         }
 
-        /* --- Couleurs spécifiques pour chaque quadrant --- */
-        /* Q1: Urgent & Important (Faire) */
-        #quadrant-do .quadrant-title { background-color: #dc3545; }
-        #quadrant-do { border-top: 4px solid #dc3545; }
+        /* Effet visuel pendant le Drag & Drop */
+        .quadrant-tasks.drag-over {
+            background-color: rgba(13, 110, 253, 0.1);
+            outline: 2px dashed #0d6efd;
+            outline-offset: -5px;
+        }
 
-        /* Q2: Important & Non Urgent (Planifier) */
-        #quadrant-schedule .quadrant-title { background-color: #0d6efd; }
-        #quadrant-schedule { border-top: 4px solid #0d6efd; }
-
-        /* Q3: Urgent & Non Important (Déléguer) */
-        #quadrant-delegate .quadrant-title { background-color: #ffc107; color: #212529; }
-        #quadrant-delegate { border-top: 4px solid #ffc107; }
-
-        /* Q4: Non Urgent & Non Important (Éliminer) */
-        #quadrant-delete .quadrant-title { background-color: #6c757d; }
-        #quadrant-delete { border-top: 4px solid #6c757d; }
-
-        /* --- Style pour chaque tâche --- */
         .task-item {
-            background-color: #f8f9fa;
-            padding: 0.6rem 0.8rem;
-            border-radius: 5px;
-            margin-bottom: 0.5rem;
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+            background: white;
             border: 1px solid #dee2e6;
-            font-size: 0.95em;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            cursor: grab;
+            transition: transform 0.1s, box-shadow 0.1s;
         }
 
         .task-item:hover {
-            background-color: #e9ecef;
-            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
         }
 
-        .task-item:last-child {
-            margin-bottom: 0;
-        }
+        .task-item:active { cursor: grabbing; }
 
         .task-date {
-            display: block; /* Pour qu'elle passe à la ligne */
-            font-size: 0.85em;
-            color: #6c757d; /* Couleur grise discrète */
-            margin-top: 4px;
+            display: block;
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
 
-    <div id="matrix-container">
-        <!-- Quadrant 1: Urgent & Important -->
-        <div id="quadrant-do" class="quadrant">
-            <h2 class="quadrant-title">À faire (Urgent & Important)</h2>
-            <div id="quadrant-do-tasks" class="quadrant-tasks"></div>
-        </div>
-
-        <!-- Quadrant 2: Important & Non Urgent -->
-        <div id="quadrant-schedule" class="quadrant">
-            <h2 class="quadrant-title">À planifier (Important & Non Urgent)</h2>
-            <div id="quadrant-schedule-tasks" class="quadrant-tasks"></div>
-        </div>
-
-        <!-- Quadrant 3: Urgent & Non Important -->
-        <div id="quadrant-delegate" class="quadrant">
-            <h2 class="quadrant-title">À déléguer (Urgent & Non Important)</h2>
-            <div id="quadrant-delegate-tasks" class="quadrant-tasks"></div>
-        </div>
-
-        <!-- Quadrant 4: Non Urgent & Non Important -->
-        <div id="quadrant-delete" class="quadrant">
-            <h2 class="quadrant-title">À éliminer (Non Urgent & Non Important)</h2>
-            <div id="quadrant-delete-tasks" class="quadrant-tasks"></div>
-        </div>
+<div id="matrix-container">
+    <div id="quadrant-do" class="quadrant">
+        <h2 class="quadrant-title">🔥 À faire (Urgent & Imp.)</h2>
+        <div id="quadrant-do-tasks" class="quadrant-tasks" data-urgent="true" data-important="true"></div>
     </div>
 
-    <script>
-        // Attend que le widget soit prêt et que l'API Grist soit disponible.
-        // On spécifie les colonnes requises. Grist demandera à l'utilisateur de les mapper.
-        grist.ready({
-            columns: ['comment', 'status', 'eisenhower', 'deadline_date']
-        });
+    <div id="quadrant-schedule" class="quadrant">
+        <h2 class="quadrant-title">📅 À planifier (Imp. & Non-Urg.)</h2>
+        <div id="quadrant-schedule-tasks" class="quadrant-tasks" data-urgent="false" data-important="true"></div>
+    </div>
 
-        // Récupère les éléments DOM pour les conteneurs de tâches de chaque quadrant.
-        const quadrants = {
-            do: document.getElementById('quadrant-do-tasks'),
-            schedule: document.getElementById('quadrant-schedule-tasks'),
-            delegate: document.getElementById('quadrant-delegate-tasks'),
-            delete: document.getElementById('quadrant-delete-tasks')
-        };
+    <div id="quadrant-delegate" class="quadrant">
+        <h2 class="quadrant-title">🤝 À déléguer (Urg. & Non-Imp.)</h2>
+        <div id="quadrant-delegate-tasks" class="quadrant-tasks" data-urgent="true" data-important="false"></div>
+    </div>
 
-        /**
-         * Fonction pour créer un élément de tâche et l'ajouter au DOM.
-         * @param {object} record - L'enregistrement Grist pour la tâche.
-         * @param {HTMLElement} container - Le conteneur du quadrant où ajouter la tâche.
-         */
-        function createTaskElement(record, container) {
-            const taskEl = document.createElement('div');
-            taskEl.className = 'task-item';
-
-            // Utilise la colonne 'comment' pour le libellé de la tâche.
-            const commentSpan = document.createElement('span');
-            commentSpan.textContent = record.comment || 'Tâche sans nom';
-            taskEl.appendChild(commentSpan);
-
-            // Ajoute la date d'échéance si elle existe (la colonne a été mappée et la cellule n'est pas vide)
-            if (record.deadline_date) {
-                // Grist envoie les dates comme des timestamps (millisecondes depuis l'époque)
-                const deadline = new Date(record.deadline_date);
-                const dateEl = document.createElement('small');
-                dateEl.className = 'task-date';
-                // Formate la date pour la locale française (jj/mm/aaaa)
-                dateEl.textContent = `Échéance : ${deadline.toLocaleDateString('fr-FR')}`;
-                taskEl.appendChild(dateEl);
-            }
-
-            // Stocke l'ID de la ligne Grist dans un attribut data-* pour l'interactivité.
-            taskEl.dataset.rowId = record.id;
-            container.appendChild(taskEl);
-        }
-
-        // grist.onRecords() est le cœur du widget. Il s'exécute à chaque fois
-        // que les données de la table liée sont chargées ou modifiées.
-        grist.onRecords(function(records) {
-            // Vide tous les quadrants avant de les remplir à nouveau pour éviter les doublons.
-            Object.values(quadrants).forEach(q => q.innerHTML = '');
-
-            // Itère sur chaque ligne (enregistrement) fournie par Grist.
-            records.forEach(record => {
-                // Spécification : Ne pas afficher les tâches dont le statut est "Fait".
-                if (record.status === 'Fait') {
-                    return; // Passe à l'enregistrement suivant.
-                }
-
-                // Récupère la valeur de la colonne 'eisenhower'.
-                // La convertit en chaîne de caractères et en minuscules pour une analyse fiable.
-                // `|| ''` gère les cas où la cellule est vide (null/undefined).
-                const eisenhowerText = String(record.eisenhower || '').toLowerCase();
-
-                // Détermine si la tâche est importante et/ou urgente.
-                const isImportant = eisenhowerText.includes('important');
-                const isUrgent = eisenhowerText.includes('urgent');
-
-                // Logique de tri dans les 4 quadrants.
-                if (isUrgent && isImportant) {
-                    createTaskElement(record, quadrants.do);
-                } else if (isImportant && !isUrgent) {
-                    createTaskElement(record, quadrants.schedule);
-                } else if (isUrgent && !isImportant) {
-                    createTaskElement(record, quadrants.delegate);
-                } else { // Non Urgent & Non Important
-                    createTaskElement(record, quadrants.delete);
-                }
-            });
-        });
-
-        // Gestion de l'interactivité : clic sur une tâche.
-        // On utilise la délégation d'événement pour une meilleure performance.
-        // Un seul écouteur sur le conteneur principal au lieu d'un par tâche.
-        document.getElementById('matrix-container').addEventListener('click', function(e) {
-            // Vérifie si l'élément cliqué est bien une tâche.
-            if (e.target && e.target.classList.contains('task-item')) {
-                // Récupère l'ID de la ligne stocké dans l'attribut data-row-id.
-                const rowId = parseInt(e.target.dataset.rowId, 10);
-                
-                // Si l'ID est valide, demande à Grist de déplacer le curseur sur cette ligne.
-                if (!isNaN(rowId)) {
-                    grist.setCursorPos({ rowId: rowId });
-                }
-            }
-        });
-    </script>
+    <div id="quadrant-delete" class="quadrant">
+        <h2 class="quadrant-title">🗑️ À éliminer (Non-Urg. & Non-Imp.)</h2>
+        <div id="quadrant-delete-tasks" class="quadrant-tasks" data-urgent="false" data-important="false"></div>
+    </div>
+</div>
 
 </body>
 </html>
